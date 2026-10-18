@@ -69,16 +69,16 @@ function Dashboard() {
   const handleFile = useCallback(
     async (file: File) => {
       const metaErr = validateFileMeta(file.type, file.size);
-      if (metaErr) return toast.error(metaErr);
+      if (metaErr) { toast.error(metaErr); return; }
       try {
         const { w, h } = await readDimensions(file);
         const dimErr = validateDimensions(w, h);
-        if (dimErr) return toast.error(dimErr);
+        if (dimErr) { toast.error(dimErr); return; }
       } catch (e) {
-        return toast.error((e as Error).message);
+        toast.error((e as Error).message); return;
       }
       if (usage.data && usage.data.remaining === 0) {
-        return toast.error(`You've used all ${FREE_DAILY_LIMIT} free images today. Come back tomorrow.`);
+        toast.error(`You have used all ${FREE_DAILY_LIMIT} free images today. Come back tomorrow.`); return;
       }
       const before = URL.createObjectURL(file);
       setPreview(null);
@@ -87,7 +87,7 @@ function Dashboard() {
       try {
         const { data: u } = await supabase.auth.getUser();
         if (!u.user) throw new Error("Please log in again.");
-        const ext = file.type.split("/")[1].replace("jpeg", "jpg");
+        const ext = (file.type.split("/")[1] ?? "png").replace("jpeg", "jpg");
         const path = `${u.user.id}/orig-${crypto.randomUUID()}.${ext}`;
         const { error } = await supabase.storage.from("images").upload(path, file, { contentType: file.type });
         if (error) throw new Error("Upload failed. Please try again.");

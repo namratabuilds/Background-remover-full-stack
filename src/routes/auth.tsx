@@ -55,7 +55,7 @@ function AuthPage() {
     try {
       if (mode === "forgot") {
         const parsed = creds.shape.email.safeParse(email);
-        if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+        if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid input");
         const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {
           redirectTo: `${window.location.origin}/reset-password`,
         });
@@ -64,7 +64,7 @@ function AuthPage() {
         return;
       }
       const parsed = creds.safeParse({ email, password });
-      if (!parsed.success) throw new Error(parsed.error.issues[0].message);
+      if (!parsed.success) throw new Error(parsed.error.issues[0]?.message ?? "Invalid input");
       if (mode === "signup") {
         const { error } = await supabase.auth.signUp({
           ...parsed.data,

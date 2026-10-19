@@ -111,6 +111,15 @@ function Dashboard() {
     [usage.data, removeFn, qc],
   );
 
+  // Process a file dropped on the landing page hero.
+  const pendingHandled = useRef(false);
+  useEffect(() => {
+    if (pendingHandled.current) return;
+    pendingHandled.current = true;
+    const f = takePendingFile();
+    if (f) handleFile(f);
+  }, [handleFile]);
+
   const busy = stage !== "idle";
   const u = usage.data;
 

@@ -1,7 +1,12 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { Zap, ShieldCheck, Clock, ImageDown } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useRef, useState } from "react";
+import { toast } from "sonner";
+import { Zap, ShieldCheck, Clock, ImageDown, UploadCloud, Star, Scissors } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import mark from "@/assets/snapcut-mark.png";
+import { validateFileMeta } from "@/lib/plans";
+import { stashFile } from "@/lib/pending-file";
+import sampleBefore from "@/assets/sample-before.jpg";
+import sampleAfter from "@/assets/sample-after.png";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -24,6 +29,114 @@ const features = [
   { icon: Clock, title: "Auto-deleted in 24h", text: "Every upload and result is removed after 24 hours." },
 ];
 
+function HeroDropZone() {
+  const navigate = useNavigate();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [drag, setDrag] = useState(false);
+
+  const handleFile = useCallback(
+    (file: File) => {
+      const err = validateFileMeta(file.type, file.size);
+      if (err) {
+        toast.error(err);
+        return;
+      }
+      stashFile(file);
+      navigate({ to: "/dashboard" });
+    },
+    [navigate],
+  );
+
+  return (
+    <label
+      htmlFor="hero-file"
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDrag(true);
+      }}
+      onDragLeave={() => setDrag(false)}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDrag(false);
+        const f = e.dataTransfer.files?.[0];
+        if (f) handleFile(f);
+      }}
+      className={`glass block cursor-pointer rounded-3xl p-6 transition-shadow ${
+        drag ? "shadow-glow-strong" : "shadow-glow hover:shadow-glow-strong"
+      }`}
+    >
+      <div className="flex min-h-72 flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border p-8 text-center">
+        <UploadCloud className="h-12 w-12 text-secondary" aria-hidden />
+        <p className="mt-4 text-lg font-semibold">Drop an image to try it now</p>
+        <p className="mt-1 text-sm text-muted-foreground">or click to browse — no signup needed to start</p>
+        <span className="mt-5 inline-flex items-center gap-2 rounded-xl bg-cta px-5 py-2.5 text-sm font-semibold text-primary-foreground">
+          <Scissors className="h-4 w-4" aria-hidden /> Remove a background
+        </span>
+      </div>
+      <input
+        id="hero-file"
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) handleFile(f);
+          e.target.value = "";
+        }}
+      />
+    </label>
+  );
+}
+
+function BeforeAfterCard() {
+  const [pos, setPos] = useState(55);
+  return (
+    <div
+      className="relative aspect-[3/4] w-full cursor-ew-resize select-none overflow-hidden rounded-2xl"
+      onPointerMove={(e) => {
+        if (e.buttons !== 1 && e.pointerType === "mouse") return;
+        const r = e.currentTarget.getBoundingClientRect();
+        setPos(Math.min(96, Math.max(4, ((e.clientX - r.left) / r.width) * 100)));
+      }}
+      onPointerDown={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        setPos(Math.min(96, Math.max(4, ((e.clientX - r.left) / r.width) * 100)));
+      }}
+      role="slider"
+      aria-label="Before and after comparison"
+      aria-valuenow={Math.round(pos)}
+      aria-valuemin={0}
+      aria-valuemax={100}
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === "ArrowLeft") setPos((p) => Math.max(4, p - 5));
+        if (e.key === "ArrowRight") setPos((p) => Math.min(96, p + 5));
+      }}
+    >
+      <div className="bg-checker absolute inset-0">
+        <img src={sampleAfter} alt="After: subject on a transparent background" className="h-full w-full object-cover" loading="lazy" width={768} height={1024} />
+      </div>
+      <div className="absolute inset-0" style={{ clipPath: `inset(0 ${100 - pos}% 0 0)` }}>
+        <img src={sampleBefore} alt="Before: original photo with busy background" className="h-full w-full object-cover" loading="lazy" width={768} height={1024} />
+      </div>
+      <div className="absolute inset-y-0 w-0.5 bg-secondary" style={{ left: `${pos}%` }} aria-hidden>
+        <span className="absolute top-1/2 -left-3.5 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full bg-cta text-xs font-bold text-primary-foreground">
+          ⇔
+        </span>
+      </div>
+      <span className="absolute left-3 top-3 rounded-full bg-background/70 px-2.5 py-1 text-xs font-medium">Before</span>
+      <span className="absolute right-3 top-3 rounded-full bg-background/70 px-2.5 py-1 text-xs font-medium">After</span>
+    </div>
+  );
+}
+
+const steps = [
+  { n: "01", title: "Upload your image", text: "Drag in a JPG, PNG or WEBP — up to 10 MB." },
+  { n: "02", title: "AI removes the background", text: "Edge detection keeps fine details like hair and fur." },
+  { n: "03", title: "Download your PNG", text: "A crisp transparent PNG, ready for anything." },
+];
+
 function Index() {
   return (
     <>
@@ -43,18 +156,28 @@ function Index() {
               <Button asChild variant="hero" size="xl">
                 <Link to="/dashboard">Remove a background</Link>
               </Button>
-              <Button asChild variant="glass" size="xl">
+              <Button asChild variant="ghost" size="xl" className="border border-border">
                 <Link to="/pricing">See pricing</Link>
               </Button>
             </div>
             <p className="mt-4 text-xs text-muted-foreground">JPG, PNG, WEBP · up to 10 MB · up to 5000×5000</p>
-          </div>
-          <div className="relative mx-auto w-full max-w-md">
-            <div className="glass aspect-square rounded-3xl p-6 shadow-glow">
-              <div className="bg-checker flex h-full items-center justify-center rounded-2xl">
-                <img src={mark} alt="SnapCut AI scissors mark on a transparent background" className="w-3/4 drop-shadow-2xl" />
-              </div>
+            <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-muted-foreground">
+              <span className="flex items-center gap-1.5">
+                <span className="flex text-secondary" aria-hidden>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="h-4 w-4 fill-current" />
+                  ))}
+                </span>
+                Loved by creators, designers and developers
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Scissors className="h-4 w-4 text-secondary" aria-hidden />
+                Keeps fine details like hair and fur
+              </span>
             </div>
+          </div>
+          <div className="mx-auto w-full max-w-md">
+            <HeroDropZone />
           </div>
         </div>
       </section>
@@ -73,14 +196,24 @@ function Index() {
       </section>
 
       <section className="mx-auto max-w-6xl px-4 pb-24">
-        <ol className="grid gap-4 md:grid-cols-3">
-          {["Upload your image", "AI removes the background", "Download your PNG"].map((s, i) => (
-            <li key={s} className="glass rounded-2xl p-6">
-              <span className="font-display text-3xl font-bold text-gradient">0{i + 1}</span>
-              <p className="mt-2 font-medium">{s}</p>
-            </li>
-          ))}
-        </ol>
+        <h2 className="text-center text-3xl font-semibold">How it works</h2>
+        <p className="mt-3 text-center text-muted-foreground">Drag the slider to see a busy background become a transparent PNG.</p>
+        <div className="mt-10 grid items-center gap-6 md:grid-cols-[1fr_320px]">
+          <ol className="grid gap-4">
+            {steps.map((s) => (
+              <li key={s.n} className="glass flex gap-5 rounded-2xl p-6">
+                <span className="font-display text-3xl font-bold text-gradient">{s.n}</span>
+                <div>
+                  <p className="font-medium">{s.title}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">{s.text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="glass mx-auto w-full max-w-80 rounded-3xl p-4 shadow-glow">
+            <BeforeAfterCard />
+          </div>
+        </div>
       </section>
     </>
   );

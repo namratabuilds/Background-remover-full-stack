@@ -27,7 +27,7 @@ function Pricing() {
     <section className="bg-glow">
       <div className="mx-auto max-w-6xl px-4 py-20">
         <h1 className="text-center text-4xl font-bold">Simple pricing</h1>
-        <p className="mt-3 text-center text-muted-foreground">Start free. Paid plans with Razorpay are on the way.</p>
+        <p className="mt-3 text-center text-muted-foreground">Start free. Paid plans are indicative and launch soon with Razorpay.</p>
         <div className="mt-12 grid gap-6 md:grid-cols-3">
           {plans.map((p) => (
             <div key={p.name} className={`glass flex flex-col rounded-2xl p-8 ${p.highlight ? "shadow-glow" : ""}`}>

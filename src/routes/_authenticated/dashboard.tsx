@@ -1,12 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { UploadCloud, Download, Loader2, ImageOff } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { getUsage, listUploads, removeBackground } from "@/lib/snapcut.functions";
 import { validateDimensions, validateFileMeta, FREE_DAILY_LIMIT } from "@/lib/plans";
+import { takePendingFile } from "@/lib/pending-file";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -109,6 +110,15 @@ function Dashboard() {
     },
     [usage.data, removeFn, qc],
   );
+
+  // Process a file dropped on the landing page hero.
+  const pendingHandled = useRef(false);
+  useEffect(() => {
+    if (pendingHandled.current) return;
+    pendingHandled.current = true;
+    const f = takePendingFile();
+    if (f) handleFile(f);
+  }, [handleFile]);
 
   const busy = stage !== "idle";
   const u = usage.data;
